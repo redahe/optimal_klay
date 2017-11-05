@@ -49,7 +49,7 @@ def fit(text, keys_index):
             continue
         if pos in wrist_moving_keys:
             penalty += 4
-        if pos in wrist_moving_keys:
+        if pos in stretch_keys:
             penalty += 3
         if pos[0] == 2:
             penalty += 2
