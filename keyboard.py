@@ -34,7 +34,7 @@ POPULATION_SIZE = 100
 MUTATION_FACTOR = 0.1
 
 
-EPOCHS = 700
+EPOCHS = 100
 
 FOREIGNERS = POPULATION_SIZE/10
 
@@ -94,6 +94,20 @@ def build_index(permutation):
     return index
 
 
+def print_layout(perm):
+    c = 0
+    for i in range(len(fixed_keys)):
+        row = []
+        for j in range(len(fixed_keys[i])):
+            key = fixed_keys[i][j]
+            if key == '*':
+                key = perm[c]
+                c += 1
+            row.append(key)
+        print(row)
+
+
+
 def layout_random_generator():
     letters = list(unset_keys)
     while True:
@@ -141,7 +155,6 @@ def main():
     population = []
     with open('big.txt', 'r') as f:
         text = f.read()[:TEXTLEN].lower()
-    print('QWERTY SCORE: ' + str(fit(text, build_index(QWERTY_perm))))
     gener = layout_random_generator()
     for i in range(POPULATION_SIZE):
         p = next(gener)
@@ -177,7 +190,12 @@ def main():
         population.sort(key=lambda x: x[1])
         population = population[: POPULATION_SIZE]
     print_epoch(epoch + 1, population)
-    print('QWERTY SCORE: ' + str(fit(text, build_index(QWERTY_perm))))
+    qwe=fit(text, build_index(QWERTY_perm))
+    best = population[0][1]
+    print('QWERTY: ' + str(qwe))
+    print ('The best found layout is better in ' + str(int((qwe-best)*1.0/qwe*100))  + ' percents:')
+    print_layout(population[0][0])
+
 
 
 if __name__ == '__main__':
