@@ -29,12 +29,14 @@ for row in fixed_keys:
     for key in row:
         unset_keys.discard(key)
 
-TEXTLEN = 10000
-POPULATION_SIZE = 2000
-MUTATION_FACTOR = 0.15
+TEXTLEN = 3000
+POPULATION_SIZE = 100
+MUTATION_FACTOR = 0.1
 
 
-EPOCHS = 100
+EPOCHS = 700
+
+FOREIGNERS = POPULATION_SIZE/10
 
 
 def fit(text, keys_index):
@@ -107,6 +109,34 @@ def print_epoch(epoch, population):
         print(population[-i])
 
 
+# Edge recombination operator
+def crossover(perm1, perm2):
+    seq = {}
+    for perm in (perm1, perm2):
+        for i in range(len(perm)-1):
+            e = seq.get(perm[i], [])
+            e.append(perm[i+1])
+            seq[perm[i]] = e
+    res = []
+    unused = set(perm1).union(set(perm2))
+    n = [perm1[0], perm2[0]][random.randint(0, 1)]
+    while len(res) < len(perm1):
+        res.append(n)
+        if n in unused:
+            unused.remove(n)
+        for k,v in seq.items():
+            if v and n in v:
+                seq[k] = v.remove(n)
+        v = seq.get(n)
+        if v:
+            n = v[random.randint(0, len(v))-1]
+        else:
+            if not unused:
+                break
+            n = list(unused)[random.randint(0, len(unused))-1]
+    return res
+
+
 def main():
     population = []
     with open('big.txt', 'r') as f:
@@ -119,7 +149,6 @@ def main():
         penalty = fit(text, index)
         population.append((p, penalty))
     population.sort(key=lambda x: x[1])
-    half = len(population[0])/2
     for epoch in range(EPOCHS):
         print_epoch(epoch, population)
         # Mutation
@@ -131,31 +160,24 @@ def main():
                 individual[fr], individual[to] = individual[to], individual[fr]
                 new_score = fit(text, build_index(individual))
                 population[i] = (individual, new_score)
+        # Immigration
+        for i in range(FOREIGNERS):
+            p = next(gener)
+            index = build_index(p)
+            penalty = fit(text, index)
+            population.append((p, penalty))
         # Crossover
-        for i in range(POPULATION_SIZE):
-                first = population[random.randint(0, len(population)-1)][0]
-                second = population[random.randint(0, len(population)-1)][0]
-                unused = set(unset_keys)
-                individual = []
-                for i in range(half):
-                    unused.remove(first[i])
-                    individual.append(first[i])
-                for i in range(half, len(first)):
-                    if (second[i] not in unused) and (first[i] in unused):
-                        individual.append(first[i])
-                        unused.remove(first[i])
-                    elif (second[i] in unused):
-                        individual.append(second[i])
-                        unused.remove(second[i])
-                    else:
-                        char = list(unused)[random.randint(0, len(unused)-1)]
-                        individual.append(char)
-                        unused.remove(char)
+        cur_size = len(population)
+        for i in range(POPULATION_SIZE*2):
+                first = population[random.randint(0, cur_size-1)][0]
+                second = population[random.randint(0, cur_size-1)][0]
+                individual = crossover(first, second)
                 new_score = fit(text, build_index(individual))
                 population.append((individual, new_score))
         population.sort(key=lambda x: x[1])
         population = population[: POPULATION_SIZE]
     print_epoch(epoch + 1, population)
+    print('QWERTY SCORE: ' + str(fit(text, build_index(QWERTY_perm))))
 
 
 if __name__ == '__main__':
